@@ -1,8 +1,8 @@
 
 import * as tf from '@tensorflow/tfjs';
 
-// This is a placeholder utility for loading the TensorFlow.js model
-// In a real implementation, you would load a trained model for currency detection
+// This is a utility for loading the TensorFlow.js model for currency detection
+// In a production app, this would load a trained model from a server or local storage
 
 export type LoadModelOptions = {
   onProgress?: (progress: number) => void;
@@ -18,15 +18,10 @@ export async function loadCurrencyDetectionModel(options?: LoadModelOptions): Pr
       }
     }
     
-    // In a real implementation, you would load an actual currency detection model
-    // For now, we'll return a placeholder model that always "detects" 100 rupees
-    // This would be replaced with a proper model URL
-    // return await tf.loadGraphModel('path/to/model/model.json');
-    
     // Console warning to indicate this is a demo
     console.warn('Using placeholder model for demo purposes. This would be replaced with a real currency detection model.');
     
-    // Create a simple model that always returns the same result for demo purposes
+    // Create a simple model that returns demo results for testing
     const input = tf.input({shape: [224, 224, 3]});
     const output = tf.layers.dense({units: 7, activation: 'softmax'}).apply(input);
     const model = tf.model({inputs: input, outputs: output as tf.SymbolicTensor});
@@ -38,23 +33,77 @@ export async function loadCurrencyDetectionModel(options?: LoadModelOptions): Pr
   }
 }
 
-// In a real implementation, this function would process an image and return detected currency
+// This simulates a more consistent currency detection process
+// In a real app, this would use computer vision and a trained model
 export async function detectCurrency(model: tf.GraphModel, imageElement: HTMLImageElement | HTMLVideoElement): Promise<number> {
   try {
-    // This is a placeholder implementation that simulates currency detection
-    // In a real app, you would:
-    // 1. Preprocess the image (resize, normalize)
-    // 2. Run inference with the model
-    // 3. Process the output to determine the currency denomination
-    
     // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Simulate detection by randomly picking a currency note
-    // In a real implementation, this would use the actual model inference
-    const currencyValues = [10, 20, 50, 100, 200, 500, 2000];
-    const randomIndex = Math.floor(Math.random() * currencyValues.length);
-    return currencyValues[randomIndex];
+    // Get pixel data from the video frame to simulate analysis
+    // This helps make our demo more realistic by analyzing the actual image
+    const canvas = document.createElement('canvas');
+    canvas.width = 224;
+    canvas.height = 224;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      throw new Error('Could not create canvas context');
+    }
+    
+    // Draw the current video frame to the canvas
+    ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
+    
+    // Get the average color of the image to simulate detection
+    // In a real model, this would be replaced with proper image analysis
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    
+    // Calculate average RGB values of the image
+    let totalR = 0, totalG = 0, totalB = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      totalR += data[i];
+      totalG += data[i + 1];
+      totalB += data[i + 2];
+    }
+    
+    const pixelCount = data.length / 4;
+    const avgR = totalR / pixelCount;
+    const avgG = totalG / pixelCount;
+    const avgB = totalB / pixelCount;
+    
+    console.log('Image analysis:', { avgR, avgG, avgB });
+    
+    // Make currency detection more predictable based on dominant colors
+    // This is a simplified heuristic for demo purposes
+    // Red-dominant
+    if (avgR > avgG * 1.2 && avgR > avgB * 1.2) {
+      return 2000; // Magenta (2000 rupee note)
+    }
+    // Yellow-dominant
+    else if (avgR > 150 && avgG > 150 && avgB < 120) {
+      return 200; // Yellow (200 rupee note)
+    }
+    // Green-ish
+    else if (avgG > avgR && avgG > avgB) {
+      return 20; // Greenish-yellow (20 rupee note)
+    }
+    // Blue-dominant
+    else if (avgB > avgR && avgB > avgG) {
+      return 50; // Blue (50 rupee note)
+    }
+    // Gray or dark
+    else if (avgR < 100 && avgG < 100 && avgB < 100) {
+      return 500; // Gray (500 rupee note)
+    }
+    // Brown-ish
+    else if (avgR > avgB && avgR < 150 && avgG < 150) {
+      return 10; // Brown (10 rupee note)
+    }
+    // Default to 100 rupee note (purple/lavender)
+    else {
+      return 100;
+    }
   } catch (error) {
     console.error('Error during currency detection:', error);
     throw error;

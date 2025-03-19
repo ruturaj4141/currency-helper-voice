@@ -29,6 +29,7 @@ const CurrencyDetector = forwardRef<CurrencyDetectorHandle, CurrencyDetectorProp
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [modelLoadProgress, setModelLoadProgress] = useState(0);
   const detectionInProgressRef = useRef(false);
+  const lastDetectionResultRef = useRef<number | null>(null);
 
   // Load model on component mount
   useEffect(() => {
@@ -92,6 +93,9 @@ const CurrencyDetector = forwardRef<CurrencyDetectorHandle, CurrencyDetectorProp
 
       // Detect currency in the current video frame
       const detectedValue = await detectCurrency(model, videoElement);
+      
+      // Store last detection result for consistency
+      lastDetectionResultRef.current = detectedValue;
 
       // Get currency details
       const currencyDetails = getCurrencyById(detectedValue);
