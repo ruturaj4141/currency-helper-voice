@@ -74,35 +74,43 @@ export async function detectCurrency(model: tf.GraphModel, imageElement: HTMLIma
     
     console.log('Image analysis:', { avgR, avgG, avgB });
     
-    // Make currency detection more predictable based on dominant colors
-    // This is a simplified heuristic for demo purposes
-    // Red-dominant
-    if (avgR > avgG * 1.2 && avgR > avgB * 1.2) {
+    // Improved currency detection based on dominant colors
+    // 50 rupee notes are fluorescent blue
+    if (avgB > avgR * 1.1 && avgB > avgG * 1.1) {
+      return 50; // Blue dominant (50 rupee note)
+    }
+    // 2000 rupee notes are magenta
+    else if (avgR > 150 && avgB > 120 && avgR > avgG * 1.2) {
       return 2000; // Magenta (2000 rupee note)
     }
-    // Yellow-dominant
+    // 200 rupee notes are bright yellow
     else if (avgR > 150 && avgG > 150 && avgB < 120) {
       return 200; // Yellow (200 rupee note)
     }
-    // Green-ish
-    else if (avgG > avgR && avgG > avgB) {
+    // 20 rupee notes are greenish-yellow
+    else if (avgG > avgR && avgG > avgB * 1.2) {
       return 20; // Greenish-yellow (20 rupee note)
     }
-    // Blue-dominant
-    else if (avgB > avgR && avgB > avgG) {
-      return 50; // Blue (50 rupee note)
-    }
-    // Gray or dark
-    else if (avgR < 100 && avgG < 100 && avgB < 100) {
+    // 500 rupee notes are stone grey
+    else if (Math.abs(avgR - avgG) < 20 && Math.abs(avgR - avgB) < 20 && avgR < 150) {
       return 500; // Gray (500 rupee note)
     }
-    // Brown-ish
-    else if (avgR > avgB && avgR < 150 && avgG < 150) {
+    // 10 rupee notes are chocolate brown
+    else if (avgR > avgB * 1.1 && avgR > avgG && avgG > avgB && avgR < 150) {
       return 10; // Brown (10 rupee note)
     }
-    // Default to 100 rupee note (purple/lavender)
+    // 100 rupee notes are lavender/purple
+    else if (avgR > 100 && avgB > avgG && avgR > avgG) {
+      return 100; // Lavender/purple (100 rupee note)
+    }
+    // Fallback
     else {
-      return 100;
+      // If detection is uncertain, look at the most dominant channel
+      const maxChannel = Math.max(avgR, avgG, avgB);
+      if (maxChannel === avgB) return 50;
+      if (maxChannel === avgG) return 20;
+      if (maxChannel === avgR && avgR > avgG * 1.2) return 10;
+      return 100; // Default fallback
     }
   } catch (error) {
     console.error('Error during currency detection:', error);

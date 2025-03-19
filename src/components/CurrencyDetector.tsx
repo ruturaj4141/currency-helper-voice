@@ -91,19 +91,48 @@ const CurrencyDetector = forwardRef<CurrencyDetectorHandle, CurrencyDetectorProp
       onDetectionStart?.();
       console.log('Starting currency detection process');
 
-      // Detect currency in the current video frame
-      const detectedValue = await detectCurrency(model, videoElement);
+      // Perform multiple detection attempts to improve accuracy
+      let detectionResults: number[] = [];
+      const detectionAttempts = 3;
+      
+      // Get multiple samples for better accuracy
+      for (let i = 0; i < detectionAttempts; i++) {
+        // Small delay between samples
+        if (i > 0) await new Promise(resolve => setTimeout(resolve, 200));
+        const result = await detectCurrency(model, videoElement);
+        detectionResults.push(result);
+      }
+      
+      // Find the most common result (simple mode calculation)
+      const resultCounts = new Map<number, number>();
+      let maxCount = 0;
+      let finalResult = 0;
+      
+      detectionResults.forEach(result => {
+        const count = (resultCounts.get(result) || 0) + 1;
+        resultCounts.set(result, count);
+        if (count > maxCount) {
+          maxCount = count;
+          finalResult = result;
+        }
+      });
+      
+      // If we have a previous result and the new result is not confident (not majority),
+      // stick with the previous result for stability
+      if (maxCount <= detectionAttempts / 2 && lastDetectionResultRef.current !== null) {
+        finalResult = lastDetectionResultRef.current;
+      }
       
       // Store last detection result for consistency
-      lastDetectionResultRef.current = detectedValue;
+      lastDetectionResultRef.current = finalResult;
 
       // Get currency details
-      const currencyDetails = getCurrencyById(detectedValue);
+      const currencyDetails = getCurrencyById(finalResult);
       console.log('Detected currency:', currencyDetails);
 
-      onDetectionComplete?.(detectedValue);
+      onDetectionComplete?.(finalResult);
       detectionInProgressRef.current = false;
-      return detectedValue;
+      return finalResult;
     } catch (error) {
       console.error('Error during currency detection:', error);
       onError?.(error instanceof Error ? error : new Error('Detection failed'));
