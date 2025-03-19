@@ -30,6 +30,7 @@ const CurrencyDetector = forwardRef<CurrencyDetectorHandle, CurrencyDetectorProp
   const [modelLoadProgress, setModelLoadProgress] = useState(0);
   const detectionInProgressRef = useRef(false);
   const lastDetectionResultRef = useRef<number | null>(null);
+  const detectionHistoryRef = useRef<Map<number, number>>(new Map()); // Store detection history for stability
 
   // Load model on component mount
   useEffect(() => {
@@ -93,35 +94,57 @@ const CurrencyDetector = forwardRef<CurrencyDetectorHandle, CurrencyDetectorProp
 
       // Perform multiple detection attempts to improve accuracy
       let detectionResults: number[] = [];
-      const detectionAttempts = 3;
+      const detectionAttempts = 5; // Increased from 3 to 5 for better accuracy
       
       // Get multiple samples for better accuracy
       for (let i = 0; i < detectionAttempts; i++) {
         // Small delay between samples
-        if (i > 0) await new Promise(resolve => setTimeout(resolve, 200));
+        if (i > 0) await new Promise(resolve => setTimeout(resolve, 150));
         const result = await detectCurrency(model, videoElement);
         detectionResults.push(result);
+        console.log(`Detection attempt ${i+1}: ${result} rupees`);
       }
       
-      // Find the most common result (simple mode calculation)
+      // Find the most common result (mode calculation)
       const resultCounts = new Map<number, number>();
-      let maxCount = 0;
-      let finalResult = 0;
       
       detectionResults.forEach(result => {
         const count = (resultCounts.get(result) || 0) + 1;
         resultCounts.set(result, count);
+      });
+      
+      // Add weight to historical detections for stability between frames
+      if (lastDetectionResultRef.current !== null) {
+        // Add a historical bias to stabilize detections over time
+        // This helps prevent rapid fluctuations between consecutive detections
+        detectionHistoryRef.current.forEach((count, value) => {
+          // Decay historical values (reduce their influence over time)
+          const newCount = Math.max(1, Math.floor(count * 0.7));
+          detectionHistoryRef.current.set(value, newCount);
+          
+          // Apply historical weight to current detection
+          const currentCount = resultCounts.get(value) || 0;
+          resultCounts.set(value, currentCount + Math.floor(newCount * 0.3));
+        });
+      }
+      
+      // Find the result with the highest count
+      let maxCount = 0;
+      let finalResult = 0;
+      
+      resultCounts.forEach((count, result) => {
+        console.log(`Currency ${result} rupees has count: ${count}`);
         if (count > maxCount) {
           maxCount = count;
           finalResult = result;
         }
       });
       
-      // If we have a previous result and the new result is not confident (not majority),
-      // stick with the previous result for stability
-      if (maxCount <= detectionAttempts / 2 && lastDetectionResultRef.current !== null) {
-        finalResult = lastDetectionResultRef.current;
-      }
+      console.log(`Most frequent detection: ${finalResult} rupees with count ${maxCount}`);
+      
+      // Update detection history for next iteration
+      const currentHistoryCount = detectionHistoryRef.current.get(finalResult) || 0;
+      detectionHistoryRef.current.set(finalResult, currentHistoryCount + 2);
       
       // Store last detection result for consistency
       lastDetectionResultRef.current = finalResult;

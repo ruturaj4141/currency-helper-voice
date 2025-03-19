@@ -74,43 +74,101 @@ export async function detectCurrency(model: tf.GraphModel, imageElement: HTMLIma
     
     console.log('Image analysis:', { avgR, avgG, avgB });
     
-    // Improved currency detection based on dominant colors
-    // 50 rupee notes are fluorescent blue
-    if (avgB > avgR * 1.1 && avgB > avgG * 1.1) {
-      return 50; // Blue dominant (50 rupee note)
+    // Calculate color relationships for more robust detection
+    const redGreenRatio = avgR / avgG;
+    const redBlueRatio = avgR / avgB;
+    const greenBlueRatio = avgG / avgB;
+    
+    console.log('Color ratios:', { redGreenRatio, redBlueRatio, greenBlueRatio });
+    
+    // Completely revised currency detection algorithm with more specific rules
+    
+    // 50 rupee notes are distinctly fluorescent blue
+    if (avgB > 120 && avgB > avgR * 1.2 && avgB > avgG * 1.2) {
+      console.log('Detected as 50 rupee (fluorescent blue)');
+      return 50;
     }
-    // 2000 rupee notes are magenta
-    else if (avgR > 150 && avgB > 120 && avgR > avgG * 1.2) {
-      return 2000; // Magenta (2000 rupee note)
+    
+    // 2000 rupee notes are distinctly magenta (high red and blue, lower green)
+    else if (avgR > 140 && avgB > 110 && avgR / avgG > 1.2 && avgB / avgG > 1.1) {
+      console.log('Detected as 2000 rupee (magenta)');
+      return 2000;
     }
-    // 200 rupee notes are bright yellow
-    else if (avgR > 150 && avgG > 150 && avgB < 120) {
-      return 200; // Yellow (200 rupee note)
+    
+    // 200 rupee notes are bright yellow (high red and green, low blue)
+    else if (avgR > 140 && avgG > 140 && avgB < 100 && redBlueRatio > 1.5 && greenBlueRatio > 1.5) {
+      console.log('Detected as 200 rupee (bright yellow)');
+      return 200;
     }
-    // 20 rupee notes are greenish-yellow
-    else if (avgG > avgR && avgG > avgB * 1.2) {
-      return 20; // Greenish-yellow (20 rupee note)
+    
+    // 20 rupee notes are greenish-yellow (high green, medium red, low blue)
+    else if (avgG > avgR * 1.1 && avgG > avgB * 1.5 && avgG > 120) {
+      console.log('Detected as 20 rupee (greenish-yellow)');
+      return 20;
     }
-    // 500 rupee notes are stone grey
-    else if (Math.abs(avgR - avgG) < 20 && Math.abs(avgR - avgB) < 20 && avgR < 150) {
-      return 500; // Gray (500 rupee note)
+    
+    // 500 rupee notes are stone grey (balanced RGB values)
+    else if (Math.abs(avgR - avgG) < 15 && Math.abs(avgR - avgB) < 15 && Math.abs(avgG - avgB) < 15 && avgR > 90 && avgR < 160) {
+      console.log('Detected as 500 rupee (stone grey)');
+      return 500;
     }
-    // 10 rupee notes are chocolate brown
-    else if (avgR > avgB * 1.1 && avgR > avgG && avgG > avgB && avgR < 150) {
-      return 10; // Brown (10 rupee note)
+    
+    // 10 rupee notes are chocolate brown (high red, medium green, low blue)
+    else if (avgR > 100 && avgR > avgB * 1.3 && redGreenRatio > 1.1 && redGreenRatio < 1.5 && greenBlueRatio > 1.2) {
+      console.log('Detected as 10 rupee (chocolate brown)');
+      return 10;
     }
-    // 100 rupee notes are lavender/purple
-    else if (avgR > 100 && avgB > avgG && avgR > avgG) {
-      return 100; // Lavender/purple (100 rupee note)
+    
+    // 100 rupee notes are lavender/purple (elevated red and blue compared to green)
+    else if (avgR > 110 && avgB > avgG * 1.1 && avgR > avgG * 1.1) {
+      console.log('Detected as 100 rupee (lavender/purple)');
+      return 100;
     }
-    // Fallback
+    
+    // Enhanced fallback logic with better confidence scoring
     else {
-      // If detection is uncertain, look at the most dominant channel
-      const maxChannel = Math.max(avgR, avgG, avgB);
-      if (maxChannel === avgB) return 50;
-      if (maxChannel === avgG) return 20;
-      if (maxChannel === avgR && avgR > avgG * 1.2) return 10;
-      return 100; // Default fallback
+      console.log('Using fallback detection logic');
+      
+      // Calculate confidence scores for each note type based on color similarity
+      const scores = new Map<number, number>();
+      
+      // Score for 50 rupee (blue)
+      scores.set(50, avgB / (avgR + avgG) * 100);
+      
+      // Score for 2000 rupee (magenta)
+      scores.set(2000, ((avgR + avgB) / (2 * avgG)) * 80);
+      
+      // Score for 200 rupee (yellow)
+      scores.set(200, ((avgR + avgG) / (2 * avgB)) * 90);
+      
+      // Score for 20 rupee (greenish-yellow)
+      scores.set(20, (avgG / (avgR + avgB)) * 100);
+      
+      // Score for 500 rupee (grey)
+      const greyness = 100 - (Math.abs(avgR - avgG) + Math.abs(avgR - avgB) + Math.abs(avgG - avgB));
+      scores.set(500, greyness);
+      
+      // Score for 10 rupee (brown)
+      scores.set(10, (avgR / avgB) * (avgG / avgB) * 50);
+      
+      // Score for 100 rupee (lavender)
+      scores.set(100, ((avgR + avgB) / (2 * avgG)) * 70);
+      
+      console.log('Confidence scores:', Object.fromEntries(scores));
+      
+      // Find the note with the highest confidence score
+      let highestScore = 0;
+      let bestMatch = 100; // Default fallback
+      
+      scores.forEach((score, note) => {
+        if (score > highestScore) {
+          highestScore = score;
+          bestMatch = note;
+        }
+      });
+      
+      console.log(`Fallback detection result: ${bestMatch} rupee note with confidence score ${highestScore}`);
+      return bestMatch;
     }
   } catch (error) {
     console.error('Error during currency detection:', error);
