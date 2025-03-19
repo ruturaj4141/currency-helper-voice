@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import { getCurrencyById } from '@/utils/currencyData';
 import { loadCurrencyDetectionModel, detectCurrency } from '@/utils/modelLoader';
 import * as tf from '@tensorflow/tfjs';
@@ -13,14 +13,18 @@ type CurrencyDetectorProps = {
   onError?: (error: Error) => void;
 };
 
-const CurrencyDetector: React.FC<CurrencyDetectorProps> = ({
+export interface CurrencyDetectorHandle {
+  processFrame: () => Promise<number | null>;
+}
+
+const CurrencyDetector = forwardRef<CurrencyDetectorHandle, CurrencyDetectorProps>(({
   videoElement,
   isActive,
   onDetectionStart,
   onDetectionComplete,
   onModelLoaded,
   onError,
-}) => {
+}, ref) => {
   const [model, setModel] = useState<tf.GraphModel | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [modelLoadProgress, setModelLoadProgress] = useState(0);
@@ -72,12 +76,19 @@ const CurrencyDetector: React.FC<CurrencyDetectorProps> = ({
   // Function to process a frame and detect currency
   const processFrame = async () => {
     if (!videoElement || !model || !isActive || detectionInProgressRef.current) {
+      console.log('Cannot process frame:', { 
+        hasVideo: !!videoElement, 
+        hasModel: !!model, 
+        isActive, 
+        inProgress: detectionInProgressRef.current 
+      });
       return null;
     }
 
     try {
       detectionInProgressRef.current = true;
       onDetectionStart?.();
+      console.log('Starting currency detection process');
 
       // Detect currency in the current video frame
       const detectedValue = await detectCurrency(model, videoElement);
@@ -97,8 +108,13 @@ const CurrencyDetector: React.FC<CurrencyDetectorProps> = ({
     }
   };
 
+  // Expose the processFrame method to parent components
+  useImperativeHandle(ref, () => ({
+    processFrame
+  }));
+
   // This component doesn't render anything visible
   return null;
-};
+});
 
 export default CurrencyDetector;

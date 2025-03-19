@@ -1,11 +1,10 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Camera, Loader2, Volume2, Info, Settings } from 'lucide-react';
+import { Camera, Loader2, Volume2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { toast } from '@/components/ui/use-toast';
 import CameraView from '@/components/CameraView';
-import CurrencyDetector from '@/components/CurrencyDetector';
+import CurrencyDetector, { CurrencyDetectorHandle } from '@/components/CurrencyDetector';
 import VoiceFeedback from '@/components/VoiceFeedback';
 import GestureHandler from '@/components/GestureHandler';
 import AccessibilityInstructions from '@/components/AccessibilityInstructions';
@@ -28,6 +27,9 @@ const Index = () => {
   // Voice feedback state
   const [speechText, setSpeechText] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  
+  // Ref for the currency detector component
+  const currencyDetectorRef = useRef<CurrencyDetectorHandle>(null);
 
   // Helper function to create speech text for detected currency
   const createCurrencySpeechText = useCallback((value: number | null) => {
@@ -103,20 +105,21 @@ const Index = () => {
     setVideoElement(element);
   }, []);
 
-  // Handle detection trigger (double tap)
+  // Handle detection trigger (for both button and double tap)
   const handleDetectionTrigger = useCallback(() => {
-    if (!isModelLoaded || isDetecting) return;
+    if (!isModelLoaded || isDetecting) {
+      console.log('Cannot trigger detection:', { isModelLoaded, isDetecting });
+      return;
+    }
     
     // Add haptic feedback if available
     if (navigator.vibrate) {
       navigator.vibrate(100);
     }
     
-    // Get the detector component and trigger detection
-    const detector = document.getElementById('currency-detector') as any;
-    if (detector && detector.processFrame) {
-      detector.processFrame();
-    }
+    // Access the detector component via ref and call processFrame directly
+    console.log('Triggering currency detection via ref');
+    currencyDetectorRef.current?.processFrame();
   }, [isModelLoaded, isDetecting]);
 
   // Start camera when component mounts
@@ -268,6 +271,7 @@ const Index = () => {
 
       {/* Currency detector (non-visual component) */}
       <CurrencyDetector
+        ref={currencyDetectorRef}
         videoElement={videoElement}
         isActive={isCameraActive && isModelLoaded}
         onDetectionStart={handleDetectionStart}
