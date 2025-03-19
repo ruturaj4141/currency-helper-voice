@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,16 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+        // Custom colors for the app
+        currency: {
+          blue: '#1769aa',
+          green: '#2e7d32',
+          orange: '#e65100',
+          purple: '#6a1b9a',
+          red: '#c62828',
+          backdrop: 'rgba(255, 255, 255, 0.85)',
+        }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,12 +94,62 @@ export default {
 					to: {
 						height: '0'
 					}
-				}
+				},
+        'pulse-light': {
+          '0%, 100%': {
+            opacity: '0.8',
+          },
+          '50%': {
+            opacity: '1',
+          },
+        },
+        'fade-in': {
+          '0%': {
+            opacity: '0',
+            transform: 'translateY(10px)',
+          },
+          '100%': {
+            opacity: '1',
+            transform: 'translateY(0)',
+          },
+        },
+        'scale-in': {
+          '0%': {
+            opacity: '0',
+            transform: 'scale(0.95)',
+          },
+          '100%': {
+            opacity: '1',
+            transform: 'scale(1)',
+          },
+        },
+        'ripple': {
+          '0%': {
+            transform: 'scale(0)',
+            opacity: '1',
+          },
+          '100%': {
+            transform: 'scale(4)',
+            opacity: '0',
+          },
+        },
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+				'accordion-up': 'accordion-up 0.2s ease-out',
+        'pulse-light': 'pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-in': 'fade-in 0.5s ease-out',
+        'scale-in': 'scale-in 0.3s ease-out',
+        'ripple': 'ripple 0.8s ease-out',
+			},
+      fontFamily: {
+        sans: ['Inter var', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
+      backdropFilter: {
+        'none': 'none',
+        'blur': 'blur(20px)',
+      },
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
